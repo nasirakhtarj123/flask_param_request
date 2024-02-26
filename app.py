@@ -6,6 +6,9 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://nazir:123456789@localhost:5432/database'
 db = SQLAlchemy(app)
 
+# Create the database tables
+db.create_all()
+
 app.register_blueprint(blp)
 
 if __name__ == '__main__':
