@@ -1,71 +1,52 @@
-from flask import Blueprint, jsonify, request
+
+from flask_smorest import Blueprint
 from flask.views import MethodView
 from app.models.persons import Persons
 from app import db
-from schemas import PersonSchema
+from schemas import ParentSchema, ParentsSchema
 
 blp = Blueprint('api', __name__)
 
-@blp.route('/humans', methods=['GET', 'POST'])
-def get_people():
-    if request.method == 'GET':
-        return PeopleAPI.get()
-    elif request.method == 'POST':
-        return PeopleAPI.post()
-
+@blp.route('/humans')
 class PeopleAPI(MethodView):
-    @staticmethod
-    def get():
+    @blp.response(200, ParentsSchema)
+    def get(self):
         persons = Persons.query.all()
-        persons_schema = PersonSchema(many=True)  # Instantiate schema here
-        result = persons_schema.dump(persons)
-        return jsonify(result)
+        return {'parents': persons}
 
-    @staticmethod
-    def post():
-        data = request.json
-        person_schema = PersonSchema()  # Instantiate schema here
-        errors = person_schema.validate(data)
-        if errors:
-            return jsonify(errors), 400
+    @blp.arguments(ParentSchema)
+    @blp.response(201, ParentSchema)
+    def post(self, data):
         new_person = Persons(name=data['name'], age=data['age'])
         db.session.add(new_person)
         db.session.commit()
-        result = person_schema.dump(new_person)
-        return jsonify(result), 201
-    
-@blp.route('/humans/<int:person_id>', methods=['GET', 'PUT', 'DELETE'])
-def get_put_delete_person(person_id):
-    return PersonAPI.as_view('person_api')(person_id)
+        return new_person, 201
 
+@blp.route('/humans/<int:person_id>')
 class PersonAPI(MethodView):
+    @blp.response(200, ParentSchema)
     def get(self, person_id):
         person = Persons.query.get(person_id)
         if person:
-            person_schema = PersonSchema()  
-            result = person_schema.dump(person)
-            return jsonify(result)
-        return jsonify({"message": "person not found"}), 404
+            return person
+        return {"message": "person not found"}, 404
 
-    def put(self, person_id):
+    @blp.arguments(ParentSchema)
+    @blp.response(200, ParentSchema)
+    def put(self, data, person_id):
         person = Persons.query.get(person_id)
         if person:
-            data = request.json
-            person_schema = PersonSchema()  
-            errors = person_schema.validate(data)
-            if errors:
-                return jsonify(errors), 400
             person.name = data['name']
             person.age = data['age']
             db.session.commit()
-            result = person_schema.dump(person)
-            return jsonify(result)
-        return jsonify({"message": "person not found"}), 404
+            return person
+        return {"message": "person not found"}, 404
 
+    @blp.response(200, ParentSchema)
     def delete(self, person_id):
         person = Persons.query.get(person_id)
         if person:
             db.session.delete(person)
             db.session.commit()
-            return jsonify({"message": "Person deleted successfully"}), 200
-        return jsonify({"message": "person not found"}), 404
+            return {"message": "Person deleted successfully"}, 200
+        return {"message": "person not found"}, 404
