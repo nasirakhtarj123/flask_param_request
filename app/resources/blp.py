@@ -1,9 +1,9 @@
-
-from flask_smorest import Blueprint
+from flask import Blueprint, jsonify
 from flask.views import MethodView
 from app.models.persons import Persons
 from app import db
 from schemas import ParentSchema, ParentsSchema
+from flask_smorest import Blueprint
 
 blp = Blueprint('api', __name__)
 
@@ -12,7 +12,9 @@ class PeopleAPI(MethodView):
     @blp.response(200, ParentsSchema)
     def get(self):
         persons = Persons.query.all()
-        return {'parents': persons}
+        # Serialize the data using the schema
+        serialized_data = ParentsSchema(many=True).dump(persons)
+        return jsonify(serialized_data)
 
     @blp.arguments(ParentSchema)
     @blp.response(201, ParentSchema)
